@@ -1,99 +1,73 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 
-import imgApi from './services/img-api';
+import fetchImages from './services/img-api';
 import Searchbar from './components/Searchbar/Searchbar';
 import ImageGallery from './components/ImageGallery/ImageGallery';
 import Button from './components/Button/Button';
 import LoaderRings from './components/Loader/Loader';
 import Modal from './components/Modal/Modal';
 
-export default class ImagesView extends Component {
-  state = {
-    hits: [],
-    currentPage: 1,
-    searchQuery: '',
-    isLoading: false,
-    error: null,
-    largeImageURL: '',
-  };
+export default function ImagesView() {
+  const [hits, setHits] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [largeImageURL, setLargeImageURL] = useState('');
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.searchQuery !== this.state.searchQuery) {
-      this.fetchImages();
+  useEffect(() => {
+    if (!searchQuery) {
+      return;
     }
-    if (prevState.hits.length !== this.state.hits.length) {
-      this.scrollDown();
-    }
-  }
 
-  onChangeQuery = query => {
-    // console.log(query);
-    this.setState({
-      searchQuery: query,
-      currentPage: 1,
-      hits: [],
-      error: null,
-    });
-  };
+    setIsLoading(true);
 
-  fetchImages = () => {
-    const { currentPage, searchQuery } = this.state;
-    const options = {
-      currentPage,
-      searchQuery,
-    };
-
-    this.setState({ isLoading: true });
-
-    imgApi
-      .fetchImages(options)
+    fetchImages(searchQuery, currentPage)
       .then(hits => {
-        this.setState(prevState => ({
-          hits: [...prevState.hits, ...hits],
-          currentPage: currentPage + 1,
-        }));
+        setHits(state => [...state, ...hits]);
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: 'smooth',
+        });
       })
       .catch(error => {
-        this.setState({ error });
+        setError({ error });
       })
-      .finally(() => this.setState({ isLoading: false }));
+      .finally(() => setIsLoading(false));
+  }, [searchQuery, currentPage]);
+
+  const onChangeQuery = query => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    setHits([]);
+    setError(null);
   };
 
-  scrollDown = () => {
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: 'smooth',
-    });
+  const openModal = url => {
+    setLargeImageURL(url);
   };
 
-  openModal = url => {
-    this.setState({ largeImageURL: url });
+  const closeModal = () => {
+    setLargeImageURL('');
   };
 
-  closeModal = () => {
-    this.setState({ largeImageURL: '' });
-  };
+  const shouldRenderLoadMoreButton = hits.length > 0 && !isLoading;
 
-  render() {
-    const { hits, isLoading, error, largeImageURL } = this.state;
-    const shouldRenderLoadMoreButton = hits.length > 0 && !isLoading;
+  return (
+    <>
+      {largeImageURL && (
+        <Modal onClose={closeModal}>
+          <img src={largeImageURL} alt={largeImageURL} />
+        </Modal>
+      )}
+      <Searchbar onSubmit={onChangeQuery} />
+      {error && <h1>Упс, виникла помилка - {error.message}</h1>}
 
-    return (
-      <>
-        {largeImageURL && (
-          <Modal onClose={this.closeModal}>
-            <img src={largeImageURL} alt={largeImageURL} />
-          </Modal>
-        )}
-        <Searchbar onSubmit={this.onChangeQuery} />
-        {error && <h1>Упс, виникла помилка - {error.message}</h1>}
-
-        {hits.length > 0 && (
-          <ImageGallery hits={hits} onImgClick={this.openModal} />
-        )}
-        {isLoading && <LoaderRings />}
-        {shouldRenderLoadMoreButton && <Button onClick={this.fetchImages} />}
-      </>
-    );
-  }
+      {hits.length > 0 && <ImageGallery hits={hits} onImgClick={openModal} />}
+      {isLoading && <LoaderRings />}
+      {shouldRenderLoadMoreButton && (
+        <Button onClick={() => setCurrentPage(state => state + 1)} />
+      )}
+    </>
+  );
 }
