@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+import { ToastContainer } from 'react-toastify';
 import fetchImages from './services/img-api';
 import Searchbar from './components/Searchbar/Searchbar';
 import ImageGallery from './components/ImageGallery/ImageGallery';
@@ -47,21 +48,18 @@ export default function ImagesView() {
     setLargeImageURL(url);
   };
 
-  const closeModal = () => {
-    setLargeImageURL('');
-  };
-
   const shouldRenderLoadMoreButton = hits.length > 0 && !isLoading;
 
   return (
     <>
       {largeImageURL && (
-        <Modal onClose={closeModal}>
+        <Modal onClose={() => setLargeImageURL('')}>
           <img src={largeImageURL} alt={largeImageURL} />
         </Modal>
       )}
       <Searchbar onSubmit={onChangeQuery} />
       {error && <h1>Упс, виникла помилка - {error.message}</h1>}
+      <ToastContainer autoClose={3000} />
 
       {hits.length > 0 && <ImageGallery hits={hits} onImgClick={openModal} />}
       {isLoading && <LoaderRings />}

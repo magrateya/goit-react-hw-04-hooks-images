@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import s from './Searchbar.module.css';
 
@@ -7,12 +9,16 @@ function Searchbar({ onSubmit }) {
   const [query, setQuery] = useState('');
 
   const handleChange = e => {
-    setQuery(e.currentTarget.value);
+    setQuery(e.currentTarget.value.toLowerCase());
   };
 
   const handleSubmit = e => {
     e.preventDefault();
 
+    if (query.trim() === '') {
+      toast.error('Введіть запит.');
+      return;
+    }
     onSubmit(query);
 
     setQuery('');
